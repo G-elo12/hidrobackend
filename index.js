@@ -1,53 +1,3 @@
-<<<<<<< HEAD
-// ============================================================
-//  Servidor Node.js — WebSocket + Express
-//  Instalar: npm install ws express
-//  Ejecutar: node server.js
-// ============================================================
-
-const express = require('express');
-const http    = require('http');
-const { WebSocketServer, WebSocket } = require('ws');
-
-// ── Configuración ──────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
-
-// ── App Express ────────────────────────────────────────────
-const app    = express();
-const server = http.createServer(app);
-
-app.use(express.json());
-
-// ── Estado global (se mantiene en memoria) ─────────────────
-const estadoRelays = {};   // { relay1: 1, relay2: 0 }
-const estadoPines  = {};   // { 5: 1, 6: 0, 7: 0, 8: 1 }
-
-// ── Endpoints REST ─────────────────────────────────────────
-
-// POST /cmd   body: { "cmd": "relay1", "state": 1 }
-// POST /cmd   body: { "pin": 7,        "state": 0 }
-app.post('/cmd', (req, res) => {
-  const { cmd, pin, state } = req.body;
-
-  if (state === undefined) {
-    return res.status(400).json({ error: 'Falta el campo state' });
-  }
-
-  // Guardar estado en memoria
-  if (cmd !== undefined) estadoRelays[cmd] = state;
-  if (pin !== undefined) estadoPines[pin]  = state;
-
-  const payload = JSON.stringify({ type: 'cmd', cmd, pin, state });
-
-  broadcast(payload, 'esp32');      // comando al ESP32
-  broadcast(payload, 'dashboard');  // ← sincronizar todos los dashboards
-
-  timestamp(`[REST→WS] Comando: ${payload}`);
-  res.json({ ok: true, payload });
-});
-
-// GET /status — clientes conectados
-=======
 const express = require("express")
 const http = require("http")
 const {WebSocketServer,WebSocket} = require("ws")
@@ -79,22 +29,11 @@ app.post("/cmd",(req,res)=>{
   res.json({ ok: true, bomba: estadoBomba });
 })
 
->>>>>>> a0dc576 (Primer commit: Estructura inicial del backend IOT)
 app.get('/status', (_req, res) => {
   const clientes = [...clienteMap.values()].map(({ device, ip }) => ({ device, ip }));
   res.json({ clientes, total: clienteMap.size });
 });
 
-<<<<<<< HEAD
-// GET /state — estado actual de relays y pines
-// Útil para que un dashboard nuevo se sincronice al conectarse
-app.get('/state', (_req, res) => {
-  res.json({ relays: estadoRelays, pins: estadoPines });
-});
-
-// ── WebSocket Server ───────────────────────────────────────
-const wss       = new WebSocketServer({ server });
-=======
 app.get('/state', (_req, res) => {
   res.json({ bomba: estadoBomba, sensores: datosSensores });
 });
@@ -127,7 +66,6 @@ function evaluarNotificaciones(temperatura, ph, nivel) {
 }
 
 const wss        = new WebSocketServer({ server });
->>>>>>> a0dc576 (Primer commit: Estructura inicial del backend IOT)
 const clienteMap = new Map();
 
 wss.on('connection', (ws, req) => {
@@ -147,24 +85,8 @@ wss.on('connection', (ws, req) => {
     switch (data.type) {
 
       case 'register': {
-<<<<<<< HEAD
-        const device = data.device || 'unknown';
+        const device = data.device || 'unknown'; // Puede ser 'esp32' o 'dashboard' (la app)
         clienteMap.set(ws, { device, ip });
-        timestamp(`Dispositivo registrado: ${device} (${ip})`);
-
-        // Confirmar registro
-        enviar(ws, { type: 'ack', msg: `Bienvenido, ${device}` });
-
-        // Si es un dashboard, enviarle el estado actual para sincronizar
-        if (device === 'dashboard') {
-          enviar(ws, {
-            type:   'state_sync',
-            relays: estadoRelays,
-            pins:   estadoPines,
-          });
-          timestamp(`[SYNC] Estado enviado a nuevo dashboard (${ip})`);
-=======
-        const device = data.device || 'unknown'; 
         timestamp(`Dispositivo registrado: ${device} (${ip})`);
 
         enviar(ws, { type: 'ack', msg: `Bienvenido, ${device}` });
@@ -176,22 +98,11 @@ wss.on('connection', (ws, req) => {
             sensores: datosSensores
           });
           timestamp(`[SYNC] Estado enviado a la nueva app (${ip})`);
->>>>>>> a0dc576 (Primer commit: Estructura inicial del backend IOT)
         }
         break;
       }
 
       case 'sensor_data': {
-<<<<<<< HEAD
-        const { sensors, uptime_ms } = data;
-        timestamp(
-          `[${data.device || 'esp32'}] ` +
-          `A0=${sensors.analog0} A1=${sensors.analog1} ` +
-          `D2=${sensors.digital2} D3=${sensors.digital3} ` +
-          `| uptime=${uptime_ms}ms`
-        );
-        broadcast(JSON.stringify(data), 'dashboard');
-=======
 
         const { temperatura, ph, nivel } = data;
 
@@ -200,7 +111,6 @@ wss.on('connection', (ws, req) => {
         timestamp(`[${data.device || 'esp32'}] Temp=${temperatura}°C | pH=${ph} | Nivel=${nivel}%`);
         broadcast(JSON.stringify({ type: 'sensor_data', sensores: datosSensores }), 'dashboard');
         evaluarNotificaciones(temperatura, ph, nivel);
->>>>>>> a0dc576 (Primer commit: Estructura inicial del backend IOT)
         break;
       }
 
@@ -224,10 +134,6 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-<<<<<<< HEAD
-// ── Helpers ────────────────────────────────────────────────
-=======
->>>>>>> a0dc576 (Primer commit: Estructura inicial del backend IOT)
 function enviar(ws, obj) {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(obj));
@@ -246,24 +152,13 @@ function timestamp(msg) {
   console.log(`[${new Date().toISOString()}] ${msg}`);
 }
 
-<<<<<<< HEAD
-// ── Arrancar servidor ──────────────────────────────────────
-=======
->>>>>>> a0dc576 (Primer commit: Estructura inicial del backend IOT)
 server.listen(PORT, () => {
   timestamp(`Servidor escuchando en http://localhost:${PORT}`);
   timestamp(`WebSocket disponible en ws://localhost:${PORT}`);
   console.log('──────────────────────────────────────────────');
-<<<<<<< HEAD
-  console.log('  POST /cmd    {"cmd":"relay1","state":1}');
-  console.log('  POST /cmd    {"pin":7,"state":0}');
-  console.log('  GET  /status');
-  console.log('  GET  /state');
-=======
   console.log('  POST /cmd            {"bomba": true/false}');
   console.log('  GET  /state          Estado de bomba y sensores');
   console.log('  GET  /notifications  Historial de alertas');
   console.log('  GET  /status         Clientes conectados');
->>>>>>> a0dc576 (Primer commit: Estructura inicial del backend IOT)
   console.log('──────────────────────────────────────────────');
 });
